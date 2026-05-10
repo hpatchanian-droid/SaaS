@@ -2,20 +2,23 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
 const Update = z.object({
   name: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")).nullable().optional(),
-  phone: z.string().optional().nullable(),
-  company: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-  tags: z.string().optional().nullable(),
+  email: z.union([z.string().email(), z.literal(""), z.null()]).optional(),
+  phone: z.string().nullish(),
+  company: z.string().nullish(),
+  address: z.string().nullish(),
+  notes: z.string().nullish(),
+  tags: z.string().nullish(),
   status: z.string().optional(),
   value: z.coerce.number().optional(),
 });
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+type Ctx = { params: { id: string } };
+
+export const GET = safe<Ctx>(async (_req, { params }) => {
   const user = await requireUser();
   const customer = await prisma.customer.findFirst({
     where: { id: params.id, businessId: user.businessId },
@@ -23,9 +26,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   });
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ customer });
-}
+});
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export const PATCH = safe<Ctx>(async (req, { params }) => {
   const user = await requireUser();
   const c = await prisma.customer.findFirst({ where: { id: params.id, businessId: user.businessId } });
   if (!c) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -35,12 +38,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     data: { ...data, email: data.email === "" ? null : data.email },
   });
   return NextResponse.json({ customer });
-}
+});
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export const DELETE = safe<Ctx>(async (_req, { params }) => {
   const user = await requireUser();
   const c = await prisma.customer.findFirst({ where: { id: params.id, businessId: user.businessId } });
   if (!c) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await prisma.customer.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
-}
+});

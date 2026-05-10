@@ -2,24 +2,25 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
 const ProductInput = z.object({
   sku: z.string().min(1).optional(),
   name: z.string().min(1),
-  description: z.string().optional().nullable(),
-  imageUrl: z.string().optional().nullable(),
+  description: z.string().nullish(),
+  imageUrl: z.string().nullish(),
   price: z.coerce.number().min(0),
   cost: z.coerce.number().min(0),
   stock: z.coerce.number().int().min(0),
   reorderLevel: z.coerce.number().int().min(0).default(5),
   unit: z.string().default("pc"),
-  categoryId: z.string().optional().nullable(),
-  supplierId: z.string().optional().nullable(),
-  warehouseId: z.string().optional().nullable(),
-  barcode: z.string().optional().nullable(),
+  categoryId: z.string().nullish(),
+  supplierId: z.string().nullish(),
+  warehouseId: z.string().nullish(),
+  barcode: z.string().nullish(),
 });
 
-export async function GET(req: Request) {
+export const GET = safe(async (req: Request) => {
   const user = await requireUser();
   const url = new URL(req.url);
   const q = url.searchParams.get("q") ?? "";
@@ -37,9 +38,9 @@ export async function GET(req: Request) {
   });
   const filtered = lowStock ? products.filter((p) => p.stock <= p.reorderLevel) : products;
   return NextResponse.json({ products: filtered });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = safe(async (req: Request) => {
   const user = await requireUser();
   const body = ProductInput.parse(await req.json());
   const sku = body.sku || `SKU-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -50,6 +51,8 @@ export async function POST(req: Request) {
   const product = await prisma.product.create({
     data: { ...body, sku, businessId: user.businessId },
   });
-  await prisma.auditLog.create({ data: { businessId: user.businessId, userId: user.id, action: "create", entity: "product", entityId: product.id } });
+  await prisma.auditLog.create({
+    data: { businessId: user.businessId, userId: user.id, action: "create", entity: "product", entityId: product.id },
+  });
   return NextResponse.json({ product });
-}
+});

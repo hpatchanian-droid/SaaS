@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
-export async function GET() {
+export const GET = safe(async () => {
   const user = await requireUser();
   const projects = await prisma.project.findMany({
     where: { businessId: user.businessId },
@@ -11,13 +12,17 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ projects });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = safe(async (req: Request) => {
   const user = await requireUser();
   const body = z
-    .object({ name: z.string().min(1), description: z.string().optional().nullable(), color: z.string().default("#6366f1") })
+    .object({
+      name: z.string().min(1),
+      description: z.string().nullish(),
+      color: z.string().default("#6366f1"),
+    })
     .parse(await req.json());
   const project = await prisma.project.create({ data: { ...body, businessId: user.businessId } });
   return NextResponse.json({ project });
-}
+});

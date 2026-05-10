@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
-export async function POST() {
+export const POST = safe(async () => {
   const user = await requireUser();
   const open = await prisma.attendance.findFirst({
     where: { businessId: user.businessId, userId: user.id, clockOut: null },
@@ -12,7 +13,8 @@ export async function POST() {
     const now = new Date();
     const hours = (now.getTime() - open.clockIn.getTime()) / 3600000;
     const updated = await prisma.attendance.update({
-      where: { id: open.id }, data: { clockOut: now, hours: Math.round(hours * 100) / 100 },
+      where: { id: open.id },
+      data: { clockOut: now, hours: Math.round(hours * 100) / 100 },
     });
     return NextResponse.json({ action: "out", record: updated });
   }
@@ -24,4 +26,4 @@ export async function POST() {
     data: { businessId: user.businessId, userId: user.id, clockIn: now, status },
   });
   return NextResponse.json({ action: "in", record: created });
-}
+});

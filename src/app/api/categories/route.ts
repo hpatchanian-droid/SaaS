@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
-export async function GET() {
+export const GET = safe(async () => {
   const user = await requireUser();
   const categories = await prisma.category.findMany({
     where: { businessId: user.businessId },
@@ -11,11 +12,11 @@ export async function GET() {
     include: { _count: { select: { products: true } } },
   });
   return NextResponse.json({ categories });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = safe(async (req: Request) => {
   const user = await requireUser();
   const body = z.object({ name: z.string().min(1), color: z.string().optional() }).parse(await req.json());
   const category = await prisma.category.create({ data: { ...body, businessId: user.businessId } });
   return NextResponse.json({ category });
-}
+});

@@ -321,28 +321,25 @@ export default function LandingPage() {
           <div className="mx-auto max-w-2xl">
             <h2 className="text-center text-4xl font-bold md:text-5xl">Frequently asked</h2>
             <div className="mt-10 divide-y rounded-xl border bg-card">
-              {faqs.map((f, i) => (
-                <button
-                  key={f.q}
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="flex w-full items-center justify-between p-5 text-left"
-                >
-                  <span className="font-medium">{f.q}</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
-                  {openFaq === i && (
-                    <p className="absolute mt-12 max-w-2xl pr-10 text-sm text-muted-foreground">
-                      {f.a}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="mt-6 space-y-3">
-              {faqs.map((f, i) => openFaq === i && (
-                <p key={f.q} className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-                  {f.a}
-                </p>
-              ))}
+              {faqs.map((f, i) => {
+                const isOpen = openFaq === i;
+                return (
+                  <div key={f.q}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : i)}
+                      aria-expanded={isOpen}
+                      className="flex w-full items-center justify-between gap-4 p-5 text-left"
+                    >
+                      <span className="font-medium">{f.q}</span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-5 text-sm text-muted-foreground">{f.a}</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

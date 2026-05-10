@@ -2,19 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
 const Update = z.object({
   title: z.string().optional(),
-  description: z.string().optional().nullable(),
+  description: z.string().nullish(),
   status: z.string().optional(),
   priority: z.string().optional(),
   position: z.number().optional(),
-  dueDate: z.string().optional().nullable(),
-  projectId: z.string().optional().nullable(),
-  assigneeId: z.string().optional().nullable(),
+  dueDate: z.string().nullish(),
+  projectId: z.string().nullish(),
+  assigneeId: z.string().nullish(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+type Ctx = { params: { id: string } };
+
+export const PATCH = safe<Ctx>(async (req, { params }) => {
   const user = await requireUser();
   const t = await prisma.task.findFirst({ where: { id: params.id, businessId: user.businessId } });
   if (!t) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -27,12 +30,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     },
   });
   return NextResponse.json({ task });
-}
+});
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export const DELETE = safe<Ctx>(async (_req, { params }) => {
   const user = await requireUser();
   const t = await prisma.task.findFirst({ where: { id: params.id, businessId: user.businessId } });
   if (!t) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await prisma.task.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
-}
+});

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
 const Body = z.object({
   type: z.enum(["IN", "OUT", "ADJUST"]),
@@ -9,7 +10,9 @@ const Body = z.object({
   note: z.string().optional(),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+type Ctx = { params: { id: string } };
+
+export const POST = safe<Ctx>(async (req, { params }) => {
   const user = await requireUser();
   const product = await prisma.product.findFirst({ where: { id: params.id, businessId: user.businessId } });
   if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -25,8 +28,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     prisma.product.update({ where: { id: product.id }, data: { stock: newStock } }),
     prisma.stockMovement.create({
       data: {
-        productId: product.id, businessId: user.businessId,
-        warehouseId: product.warehouseId, type: body.type,
+        productId: product.id,
+        businessId: user.businessId,
+        warehouseId: product.warehouseId,
+        type: body.type,
         quantity: body.type === "ADJUST" ? newStock - product.stock : body.quantity,
         note: body.note,
       },
@@ -36,11 +41,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (newStock <= product.reorderLevel) {
     await prisma.notification.create({
       data: {
-        businessId: user.businessId, userId: user.id,
-        title: "Low stock alert", body: `${product.name} is now at ${newStock} units (reorder at ${product.reorderLevel}).`,
-        type: "WARNING", link: `/inventory/${product.id}`,
+        businessId: user.businessId,
+        userId: user.id,
+        title: "Low stock alert",
+        body: `${product.name} is now at ${newStock} units (reorder at ${product.reorderLevel}).`,
+        type: "WARNING",
+        link: `/inventory`,
       },
     });
   }
   return NextResponse.json({ ok: true, stock: newStock });
-}
+});

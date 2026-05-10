@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 import { formatCurrency } from "@/lib/utils";
 
 /**
@@ -9,8 +10,7 @@ import { formatCurrency } from "@/lib/utils";
  * otherwise we fall back to deterministic, data-driven rules so the
  * feature always works.
  */
-export async function GET() {
-  try {
+export const GET = safe(async () => {
     const user = await requireUser();
     const businessId = user.businessId;
     const insights: string[] = [];
@@ -93,7 +93,4 @@ export async function GET() {
     }).catch(() => {});
 
     return NextResponse.json({ insights });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Failed" }, { status: 401 });
-  }
-}
+});

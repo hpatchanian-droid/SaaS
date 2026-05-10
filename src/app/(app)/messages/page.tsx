@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { initials, formatRelativeTime, cn } from "@/lib/utils";
 
 export default function MessagesPage() {
@@ -117,9 +118,22 @@ export default function MessagesPage() {
         {active ? (
           <>
             <div className="flex h-12 items-center gap-2 border-b px-4">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold">{active.name}</span>
-              {active.description && <span className="hidden text-xs text-muted-foreground sm:inline">— {active.description}</span>}
+              <Hash className="hidden h-4 w-4 text-muted-foreground md:block" />
+              <span className="hidden font-semibold md:inline">{active.name}</span>
+              {active.description && <span className="hidden text-xs text-muted-foreground sm:inline md:ml-0">— {active.description}</span>}
+              <div className="flex flex-1 items-center gap-2 md:hidden">
+                <Select value={activeId ?? undefined} onValueChange={(v) => setActiveId(v)}>
+                  <SelectTrigger className="h-8"><SelectValue placeholder="Choose channel" /></SelectTrigger>
+                  <SelectContent>
+                    {channels.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>#{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setNewOpen(true)} aria-label="New channel">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div ref={listRef} className="flex-1 space-y-1 overflow-y-auto p-4">
               {messages.length === 0 ? (

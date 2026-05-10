@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
-export async function GET() {
+export const GET = safe(async () => {
   const user = await requireUser();
   const businessId = user.businessId;
   const now = new Date();
@@ -53,4 +54,4 @@ export async function GET() {
       pipelineValue: customers.reduce((s, c) => s + c.value, 0),
     },
   });
-}
+});

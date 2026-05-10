@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 
-export async function GET(req: Request) {
+export const GET = safe(async (req: Request) => {
   const user = await requireUser();
   const url = new URL(req.url);
   const userId = url.searchParams.get("userId") || undefined;
-  const days = parseInt(url.searchParams.get("days") || "14");
+  const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get("days") || "14")));
   const since = new Date();
   since.setDate(since.getDate() - days);
   const where: any = { businessId: user.businessId, clockIn: { gte: since } };
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
   if (user.role === "EMPLOYEE") where.userId = user.id;
 
   const records = await prisma.attendance.findMany({
-    where, orderBy: { clockIn: "desc" },
+    where,
+    orderBy: { clockIn: "desc" },
     include: { user: { select: { id: true, name: true, avatar: true } } },
   });
 
@@ -25,4 +27,4 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json({ records, open });
-}
+});

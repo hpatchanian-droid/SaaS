@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { safe } from "@/lib/api-error";
 import { publish } from "@/lib/events";
 
 async function ensureMember(channelId: string, userId: string, businessId: string) {
@@ -13,7 +14,9 @@ async function ensureMember(channelId: string, userId: string, businessId: strin
   }
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+type Ctx = { params: { id: string } };
+
+export const GET = safe<Ctx>(async (_req, { params }) => {
   const user = await requireUser();
   await ensureMember(params.id, user.id, user.businessId);
   const messages = await prisma.message.findMany({
@@ -23,9 +26,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     take: 200,
   });
   return NextResponse.json({ messages });
-}
+});
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export const POST = safe<Ctx>(async (req, { params }) => {
   const user = await requireUser();
   await ensureMember(params.id, user.id, user.businessId);
   const body = z.object({ content: z.string().min(1) }).parse(await req.json());
@@ -35,4 +38,4 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   publish(`channel:${params.id}`, { type: "message", message });
   return NextResponse.json({ message });
-}
+});
